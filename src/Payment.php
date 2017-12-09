@@ -55,7 +55,7 @@ class Payment
     /**
      * Converts amount to BTC, USD, EUR, RUR or CNY
      * @param $currency
-     * @return bool
+     * @return float|bool Amount in requested currency. False if unknown currency is requested.
      */
     public function convertTo($currency) {
         $client = Client::getInstance();
