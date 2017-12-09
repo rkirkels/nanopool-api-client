@@ -1,21 +1,37 @@
 <?php
 namespace RutgerKirkels\NanoPool_API_Client;
 
-define('NANOPOOL_API_HOST', 'https://api.nanopool.org/v1');
-
 class Client
 {
     protected $walletAddress;
     protected $currency;
+    protected $prices = [];
+    protected $connector;
+    protected static $instance;
+
+    public static function init(string $walletAddress = '', string $currency = 'eth') {
+        if (self::$instance === null) {
+            self::$instance = new Client($walletAddress, $currency);
+        }
+        return self::$instance;
+    }
+
+    public static function getInstance() {
+        if (self::$instance === null) {
+            return false;
+        }
+        return self::$instance;
+    }
 
     /**
      * Client constructor.
      * @param string $walletAddress
      * @param string $currency
      */
-    public function __construct(string $walletAddress, string $currency) {
+    public function __construct(string $walletAddress = '', string $currency = 'eth') {
         $this->walletAddress = $walletAddress;
         $this->currency = strtolower($currency);
+        $this->connector = Connector::getInstance($currency);
     }
 
     /**
@@ -23,7 +39,7 @@ class Client
      * @return mixed
      */
     public function getBalance() {
-        $data = $this->execute('balance');
+        $data = $this->connector->execute('balance', $this->walletAddress);
         if ($data) {
             if ($data->status === true) {
                 return $data->data;
@@ -37,7 +53,7 @@ class Client
      * @return mixed
      */
     public function getBalanceAndHashrate() {
-        $data = $this->execute('balance_hashrate');
+        $data = $this->connector->execute('balance_hashrate', $this->walletAddress);
         if ($data) {
             if ($data->status === true) {
                 return $data->data;
@@ -50,27 +66,28 @@ class Client
      * @return array|bool
      */
     public function getPayments() {
-        $data = $this->execute('payments');
+        $data = $this->connector->execute('payments', $this->walletAddress);
         if ($data) {
             $payments = [];
             foreach ($data->data as $paymentData) {
-                $payments[] = new Payment($paymentData->date, $paymentData->txHash, $paymentData->amount, $paymentData->confirmed);
+                $payments[] = new Payment($paymentData->date, $paymentData->txHash, $paymentData->amount, $this->currency, $paymentData->confirmed);
             }
             return $payments;
         }
         return false;
     }
 
-    /**
-     * @param $endPoint
-     * @return mixed
-     */
-    protected function execute($endPoint) {
-        $client = new \GuzzleHttp\Client();
-        $res = $client->request('GET', NANOPOOL_API_HOST . '/' . $this->currency . '/' . $endPoint . '/' . $this->walletAddress);
-        if ($res->getStatusCode() === 200) {
-            return json_decode($res->getBody());
+    public function getPrices() {
+        if (count($this->prices) === 0) {
+            $data = $this->connector->execute('prices');
+            if ($data) {
+                foreach ($data->data as $currency => $price) {
+                    $this->prices[substr($currency, 6)] = $price;
+                }
+            }
         }
-        return false;
+        return $this->prices;
+
     }
+
 }
