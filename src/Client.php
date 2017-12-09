@@ -46,6 +46,22 @@ class Client
     }
 
     /**
+     * Get payments sent to the configured wallet
+     * @return array|bool
+     */
+    public function getPayments() {
+        $data = $this->execute('payments');
+        if ($data) {
+            $payments = [];
+            foreach ($data->data as $paymentData) {
+                $payments[] = new Payment($paymentData->date, $paymentData->txHash, $paymentData->amount, $paymentData->confirmed);
+            }
+            return $payments;
+        }
+        return false;
+    }
+
+    /**
      * @param $endPoint
      * @return mixed
      */
