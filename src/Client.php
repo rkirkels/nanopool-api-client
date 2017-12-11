@@ -90,4 +90,21 @@ class Client
 
     }
 
+    public function getShareHistory() {
+        $data = $this->connector->execute('shareratehistory', $this->walletAddress);
+        if ($data) {
+            $history = [];
+            foreach ($data->data as $part) {
+                $timestamp = new \DateTime();
+                $timestamp->setTimestamp($part->date);
+                $historyPart = new \stdClass();
+                $historyPart->timestamp = $timestamp;
+                $historyPart->shares = $part->shares;
+                $history[] = $historyPart;
+            }
+            return $history;
+        }
+        return false;
+    }
+
 }
